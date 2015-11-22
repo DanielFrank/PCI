@@ -63,3 +63,13 @@ def sim_pearson(prefs,p1,p2):
     if den==0: return 0   
     r=num/den
     return r
+
+#Returns best matchs for person from prefs dictionary
+#Number of results and similarity function are optional
+def topMatches(prefs,person,n=5,similarity=sim_pearson):
+    scores=[(similarity(prefs,person,other),other)
+        for other in prefs if other!=person]
+    #Sort the list so the highest score appears on the top
+    scores.sort()
+    scores.reverse()
+    return scores[0:n]
