@@ -111,3 +111,47 @@ def transformPrefs(prefs):
             #Flip item and person
             result[item][person] = prefs[person][item]
     return result
+
+#Create a dictionary of items showing which other items they are most similar to
+def calculateSimilarItems(prefs,n=10):
+    result={}
+    
+    #Invert the pref matrix to be item-centric
+    itemPrefs=transformPrefs(prefs)
+    c=0
+    for item in itemPrefs:
+        #Status update for large datasets
+        c+=1
+        if c%100==0: print "%d / %d" % (c,len(itemPrefs))
+        #Find the most similar items to this one
+        scores=topMatches(itemPrefs,item,n=n,similarity=sim_distance)
+        result[item]=scores
+    return result
+
+#Get recommendations by taking advantage of item-based filtering
+def getRecommendedItems(prefs,itemMatch,user):
+    userRatings=prefs[user]
+    scores={}
+    totalSim={}
+    
+    #Loop over item rated by user
+    for (item, rating) in userRatings.items():
+        
+        #Loop over items similar to this one
+        for (similarity,item2) in itemMatch[item]:
+            
+            #Ignore if user rated this item
+            if item2 in userRatings: continue
+            
+            scores.setdefault(item2,0)
+            scores[item2]+=similarity*rating
+
+            totalSim.setdefault(item2,0)
+            totalSim[item2]+=similarity
+
+    rankings=[(score/totalSim[item],item) for item, score in scores.items()]
+    
+    #Return sorted list
+    rankings.sort()
+    rankings.reverse()
+    return rankings
