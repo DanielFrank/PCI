@@ -1,3 +1,6 @@
+from math import sqrt
+from PIL import Image,ImageDraw
+
 def readfile(filename):
     lines=[line for line in file(filename)]
     
@@ -11,9 +14,8 @@ def readfile(filename):
         rownames.append(p[0])
         #The data for this row is the remainder of the row
         data.append([float(x) for x in p[1:]])
-    return rownames,colnames,data
-    
-from math import sqrt
+    return rownames,colnames,data    
+
 def pearson(v1,v2):
     #simple sums
     sum1=sum(v1)
@@ -90,3 +92,66 @@ def printclust(clust,labels=None,n=0):
     if clust.left != None: printclust(clust.left,labels=labels,n=n+1)
     if clust.right != None: printclust(clust.right,labels=labels,n=n+1)
     
+def getheight(clust):
+    #Is this an endpoint? Then the height is just 1
+    if clust.left==None and clust.right==None: return 1
+    
+    #otherwise the height is the sum of the heights of each branches
+    return getheight(clust.left)+getheight(clust.right)
+
+def getdepth(clust):
+    #Depth of an endpoint is 0.0
+    if clust.left==None and clust.right==None: return 0.0
+    
+    #otherwise the depth of a branch is the greater of the depths of its sides plus its own distance
+    return max(getdepth(clust.left),getdepth(clust.right)) + clust.distance
+
+def drawdendrogram(clust,labels,jpeg='clusters.jpg'):
+    #height and width
+    h= getheight(clust)*20
+    w=1200
+    depth=getdepth(clust)
+    
+    #width is fixed so scale distances accordingly
+    scaling=float(w-150)/depth
+    
+    #Create a new image with a white background
+    img=Image.new('RGB',(w,h),(255,255,255))
+    draw=ImageDraw.Draw(img)
+
+    draw.line((0,h/2,10,h/2),fill=(255,0,0))
+    
+    #Draw the first node
+    drawnode(draw,clust,10,(h/2),scaling,labels)
+    img.save(jpeg,'JPEG')
+    
+def drawnode(draw,clust,x,y,scaling,labels):
+    if clust.id<0:
+        h1=getheight(clust.left)*20
+        h2=getheight(clust.right)*20
+        top=y-(h1+h2)/2
+        bottom=y+(h1+h2)/2
+        #line length
+        ll=clust.distance*scaling
+        #Vertical line from this cluster to children
+        draw.line((x,top+h1/2,x,bottom-h2/2),fill=(255,0,0))
+
+        #Hroizontal line to left item
+        draw.line((x,top+h1/2,x+ll,top+h1/2),fill=(255,0,0))
+
+        #Hroizontal line to right item
+        draw.line((x,bottom-h2/2,x+ll,bottom-h2/2),fill=(255,0,0))
+
+        #Call the function to draw the left and right nodes
+        drawnode(draw,clust.left,x+ll,top+h1/2,scaling,labels)
+        drawnode(draw,clust.right,x+ll,bottom-h2/2,scaling,labels)
+    else:
+        #If this is an endpoint, draw the item label
+        draw.text((x+5,y-7),labels[clust.id],(0,0,0))
+
+def rotatematrix(data):
+    newdata=[]
+    for i in range(len(data[0])):
+        newrow=[data[j][i] for j in range(len(data))]
+        newdata.append(newrow)
+    return newdata
